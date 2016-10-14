@@ -2,14 +2,12 @@
 
 # ---------- 'Der-Onlinestundenplan.de - Python3 commandline tool' ---------- 
 
-# ToDo:
-# - add support for ö/ä/ü
-# 	-> reason why -s rvwbk -lc crashes :D
-
 import json
 import urllib.request
 from pprint import pprint
 import argparse
+
+APP_VERSION = 1.0
 
 def main():
 
@@ -26,64 +24,60 @@ def main():
 
 	if args.schools: 
 		GetSchools()
-
-	if args.school is not None:
-		if args.schoolClass is not None:
-			if args.relativeWeek is not None:
-				GetTimetable(args.school,args.schoolClass,args.relativeWeek)
+	else:
+		if args.school is not None:
+			if args.schoolClass is not None:
+				if args.relativeWeek is not None:
+					GetTimetable(args.school,args.schoolClass,args.relativeWeek)
+				else:
+					GetTimetable(args.school,args.schoolClass,0)
 			else:
-				GetTimetable(args.school,args.schoolClass,0)
+				if args.classes:
+					GetClasses(args.school)
+				else:
+					GetSchoolInfo(args.school)
 		else:
-			if args.classes:
-				GetClasses(args.school)
-			else:
-				GetSchoolInfo(args.school)
+			print('Der-OnlineStundenplan.de - Python3 App\n')
+			parser.print_help()
 
 	return
 
 
-# Function for 
+# Function for printing a simple table
 def printTable(table):
     col_width = [max(len(x) for x in col) for col in zip(*table)]
         
     for line in table:
-        print ('| ' + ' | '.join('{:{}}'.format(x, col_width[i])
+        print('| ' + ' | '.join('{:{}}'.format(x, col_width[i])
                 for i, x in enumerate(line)) + ' |')
     return
 
 
 def GetSchools():
-	rawJson = urllib.request.urlopen('http://der-onlinestundenplan.de/api/v1/school').read()
-	fineJson = json.loads(str(rawJson,'utf-8'))
+	fineJson = GetJson('http://der-onlinestundenplan.de/api/v1/school')
 
-	print ('Available schools:\n')
-
+	print('Available schools:\n')
 	table =  [('Name','City')] # ,'Website,
 	table += [('--')]
 	table += [(key[u'name'], key[u'city']) # , key[u'website']
 			for key in fineJson[u'schools']]
 	printTable(table)
-
 	return 
 
 def GetSchoolInfo(school):
-	rawJson = urllib.request.urlopen('http://der-onlinestundenplan.de/api/v1/school/' + school + '/').read()
-	fineJson = json.loads(str(rawJson,'utf-8'))
+	fineJson = GetJson('http://der-onlinestundenplan.de/api/v1/school/' + school + '/')
 
-	print ('Schoolinfo for \'' + school + '\':\n')
-
+	print('Schoolinfo for \'' + school + '\':\n')
 	table =  [('Name','City','Website')]
 	table += [('---')]
 	table += [(fineJson[u'name'], fineJson[u'city'], fineJson[u'website'])]
 	printTable(table)
-
 	return	
 
 def GetClasses(school):
-	rawJson = urllib.request.urlopen('http://der-onlinestundenplan.de/api/v1/school/' + school + '/class').read()
-	fineJson = json.loads(str(rawJson,'utf-8'))
+	fineJson = GetJson('http://der-onlinestundenplan.de/api/v1/school/' + school + '/class')
 
-	print ('Classes for \'' + school + '\':\n')
+	print('Classes for \'' + school + '\':\n')
 	table =  [('Class')]
 	table += [('-')]
 
@@ -91,17 +85,14 @@ def GetClasses(school):
 		table += [(key)]
 
 	printTable(table)
-
 	return
 
 def GetTimetable(school,schoolClass,relativeWeek):
-	rawJson = urllib.request.urlopen('http://der-onlinestundenplan.de/api/v1/school/' + school + '/class/' + schoolClass + '/' + str(relativeWeek)).read()
-	fineJson = json.loads(str(rawJson,'utf-8'))
+	fineJson = GetJson('http://der-onlinestundenplan.de/api/v1/school/' + school + '/class/' + schoolClass + '/' + str(relativeWeek))
 
-	print ('Timetable for class \'' + schoolClass + '\' of school \'' + school + '\':\n')
-
-	print ('Week: ' + str(fineJson[u'week']))
-	print ('Last updated: ' + fineJson[u'last_updated'] + '\n')
+	print('Timetable for class \'' + schoolClass + '\' of school \'' + school + '\':\n')
+	print('Week: ' + str(fineJson[u'week']))
+	print('Last updated: ' + fineJson[u'last_updated'] + '\n')
 
 	headline = [(key[u'name']) for key in fineJson[u'timeTable'][u'days']]
 	lessons = [(key[u'data']) for key in fineJson[u'timeTable'][u'days']]
@@ -128,7 +119,6 @@ def GetTimetable(school,schoolClass,relativeWeek):
 					timetable[j][i] = FormatLessonForTimetable(lessons[i-1][j-2])
 			
 	printTable(timetable)
-
 	return
 
 # Function for formatting a lesson 
@@ -155,6 +145,18 @@ def FormatLessonForTimetable(lessonDescription):
 					formattedLesson += ' | '
 
 	return formattedLesson
+
+def GetJson(url):
+	
+	req = urllib.request.Request(
+	    url, 
+	    data=None, 
+	    headers={'User-Agent': 'Der-OnlineStundenplan.de (Python3 / Version ' + APP_VERSION + ' )'}
+		)
+
+	rawJson = urllib.request.urlopen(req).read()
+	fineJson = json.loads(str(rawJson,'utf-8'))	
+	return fineJson
 
 
 main()

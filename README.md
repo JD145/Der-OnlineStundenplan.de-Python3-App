@@ -8,3 +8,5 @@ Here are some links to further informations. Sadly they are only available in ge
 +[API Documentation](https://www.Der-OnlineStundenplan.de/api)
 
 +[Other App](https://www.Der-OnlineStundenplan.de/apps)
+
+Tested with Python 3.5!
