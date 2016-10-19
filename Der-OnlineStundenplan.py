@@ -7,21 +7,17 @@ import urllib.request
 from pprint import pprint
 import argparse
 
-APP_VERSION = 1.0
-
 def main():
-
 	# parse Arguments
-	parser = argparse.ArgumentParser()
-	
+	parser = argparse.ArgumentParser()	
 	parser.add_argument('-ls','--schools', action='store_true', help='Lists all available schools.')
 	parser.add_argument('-s','--school', help='Selects a school. If not class is selected, the schoolinfo will be shown.')
 	parser.add_argument('-lc','--classes', action='store_true', help='Lists all classes of a school. Requires a selection if a school.')
 	parser.add_argument('-c','--schoolClass', help='Selects a class. If a school is also selected the timetable will be shown.')
 	parser.add_argument('-rw','--relativeWeek', help='Selects a relative week for timetable, if school and class are selected.')
-
 	args = parser.parse_args()
 
+	# select function
 	if args.schools: 
 		GetSchools()
 	else:
@@ -52,73 +48,76 @@ def printTable(table):
                 for i, x in enumerate(line)) + ' |')
     return
 
-
 def GetSchools():
 	fineJson = GetJson('http://der-onlinestundenplan.de/api/v1/school')
-
-	print('Available schools:\n')
-	table =  [('Name','City')] # ,'Website,
-	table += [('--')]
-	table += [(key[u'name'], key[u'city']) # , key[u'website']
-			for key in fineJson[u'schools']]
-	printTable(table)
+	
+	if (CheckError(fineJson) == 0):
+		print('Available schools:\n')
+		table =  [('Name','City')] # ,'Website,
+		table += [('--')]
+		table += [(key[u'name'], key[u'city']) # , key[u'website']
+				for key in fineJson[u'schools']]
+		printTable(table)
 	return 
 
 def GetSchoolInfo(school):
 	fineJson = GetJson('http://der-onlinestundenplan.de/api/v1/school/' + school + '/')
 
-	print('Schoolinfo for \'' + school + '\':\n')
-	table =  [('Name','City','Website')]
-	table += [('---')]
-	table += [(fineJson[u'name'], fineJson[u'city'], fineJson[u'website'])]
-	printTable(table)
+	if (CheckError(fineJson) == 0):
+		print('Schoolinfo for \'' + school + '\':\n')
+		table =  [('Name','City','Website')]
+		table += [('---')]
+		table += [(fineJson[u'name'], fineJson[u'city'], fineJson[u'website'])]
+		printTable(table)
 	return	
 
 def GetClasses(school):
 	fineJson = GetJson('http://der-onlinestundenplan.de/api/v1/school/' + school + '/class')
 
-	print('Classes for \'' + school + '\':\n')
-	table =  [('Class')]
-	table += [('-')]
+	if (CheckError(fineJson) == 0):
+		print('Classes for \'' + school + '\':\n')
+		table =  [('Class')]
+		table += [('-')]
 
-	for key in fineJson[u'classes']:
-		table += [(key)]
+		for key in fineJson[u'classes']:
+			table += [(key)]
 
-	printTable(table)
+		printTable(table)
 	return
 
 def GetTimetable(school,schoolClass,relativeWeek):
 	fineJson = GetJson('http://der-onlinestundenplan.de/api/v1/school/' + school + '/class/' + schoolClass + '/' + str(relativeWeek))
 
-	print('Timetable for class \'' + schoolClass + '\' of school \'' + school + '\':\n')
-	print('Week: ' + str(fineJson[u'week']))
-	print('Last updated: ' + fineJson[u'last_updated'] + '\n')
+	if (CheckError(fineJson) == 0):
+		print('Timetable for class \'' + schoolClass + '\' of school \'' + school + '\':\n')
+		print('Week: ' + str(fineJson[u'week']))
+		print('Last updated: ' + fineJson[u'last_updated'] + '\n')
 
-	headline = [(key[u'name']) for key in fineJson[u'timeTable'][u'days']]
-	lessons = [(key[u'data']) for key in fineJson[u'timeTable'][u'days']]
-	times = [(key) for key in fineJson[u'timeTable'][u'times']]
+		headline = [(key[u'name']) for key in fineJson[u'timeTable'][u'days']]
+		lessons = [(key[u'data']) for key in fineJson[u'timeTable'][u'days']]
+		times = [(key) for key in fineJson[u'timeTable'][u'times']]
 
-	cols = len(headline) + 1
-	rows = len(times) + 2
+		cols = len(headline) + 1
+		rows = len(times) + 2
 
-	timetable = [['' for i in range(cols)] for j in range(rows)]
+		timetable = [['' for i in range(cols)] for j in range(rows)]
 
-	# j = Zeile ; i = Spalte
-	for i in range(cols):
-		if (i > 0):
-			timetable[0][i] = str(headline[i-1])
+		# j = Zeile ; i = Spalte
+		for i in range(cols):
+			if (i > 0):
+				timetable[0][i] = str(headline[i-1])
 
-		for j in range(rows):
-			if (j == 1):
-				timetable[j][i] = '-' # '---' als Füllzeichen in Funktion printTable implementieren, damit ganze Zeile befüllt wird
+			for j in range(rows):
+				if (j == 1):
+					timetable[j][i] = '-' # '---' als Füllzeichen in Funktion printTable implementieren, damit ganze Zeile befüllt wird
 
-			if (j > 1):
-				timetable[j][0] = str(times[j-2])
+				if (j > 1):
+					timetable[j][0] = str(times[j-2])
 
-				if (len(lessons[i-1]) > j-2):
-					timetable[j][i] = FormatLessonForTimetable(lessons[i-1][j-2])
-			
-	printTable(timetable)
+					if (len(lessons[i-1]) > j-2):
+						timetable[j][i] = FormatLessonForTimetable(lessons[i-1][j-2])
+				
+		printTable(timetable)
 	return
 
 # Function for formatting a lesson 
@@ -146,17 +145,27 @@ def FormatLessonForTimetable(lessonDescription):
 
 	return formattedLesson
 
-def GetJson(url):
-	
+def GetJson(url):	
 	req = urllib.request.Request(
 	    url, 
 	    data=None, 
-	    headers={'User-Agent': 'Der-OnlineStundenplan.de (Python3 / Version ' + APP_VERSION + ' )'}
+	    headers={'User-Agent': 'Der-OnlineStundenplan.de (Python3)'}
 		)
 
 	rawJson = urllib.request.urlopen(req).read()
 	fineJson = json.loads(str(rawJson,'utf-8'))	
 	return fineJson
+
+def CheckError(json):
+	returnVal = 1
+
+	if (u'errorCode' in json):
+		print('Oops ... something went wrong. Check your arguments, please! :-)\n')
+		print('Errorcode:\t' + str(json[u'errorCode']))
+		print('Errormessage:\t' + json[u'errorMessage'])
+	else:
+		returnVal = 0	
+	return returnVal
 
 
 main()
