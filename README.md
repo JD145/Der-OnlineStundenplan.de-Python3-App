@@ -1,4 +1,4 @@
-<img alt="Logo" src="http://der-onlinestundenplan.de/app/templates/default/images/Der-OnlineStundenplan.de_logo.svg" width="100" height="100"</img>
+<img alt="Logo" src="http://der-onlinestundenplan.de/app/templates/default/images/Der-OnlineStundenplan.de_logo.svg" width="100" height="100"/>
 
 # Der-OnlineStundenplan.de-Python3-App
 ## Introduction
